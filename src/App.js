@@ -1,143 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import SearchPage from './components/SearchPage';
 import RegistrationForm from './components/RegistrationForm';
 import CustomerProfilePage from './components/CustomerProfilePage';
 import AddJobForm from './components/AddJobForm';
 import Dashboard from './components/Dashboard';
+import LoadingSpinner from './components/LoadingSpinner';
+import { useFirebase } from './hooks/useFirebase';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('search');
   const [searchVehicleNumber, setSearchVehicleNumber] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [appLoading, setAppLoading] = useState(false);
+  const [appError, setAppError] = useState(null);
   
-  // Mock customer data - In a real app, this would come from an API
-  const [customers, setCustomers] = useState([
-    {
-      id: 1,
-      fullName: 'John Doe',
-      mobileNumber: '0771234567',
-      address: '123 Main St, Colombo',
-      vehicleModel: 'Toyota Corolla',
-      vehicleNumber: 'ABC-1234',
-      nicNumber: '871234567V',
-      birthday: '1987-05-15',
-      vehicleType: 'Car',
-      serviceHistory: [
-        {
-          id: 1,
-          jobDateTime: '2025-07-20T10:30:00',
-          services: ['Oil Change', 'Filter Replace']
-        },
-        {
-          id: 2,
-          jobDateTime: '2025-06-15T14:45:00',
-          services: ['Tire Rotation', 'Brake Check']
-        }
-      ]
-    },
-    {
-      id: 2,
-      fullName: 'Jane Smith',
-      mobileNumber: '0777654321',
-      address: '456 Oak Ave, Kandy',
-      vehicleModel: 'Honda Civic',
-      vehicleNumber: 'XYZ-5678',
-      nicNumber: '901234567V',
-      birthday: '1990-08-22',
-      vehicleType: 'Car',
-      serviceHistory: [
-        {
-          id: 3,
-          jobDateTime: '2025-07-18T09:15:00',
-          services: ['Oil Change']
-        }
-      ]
-    }
-  ]);
+  const { customers, jobs } = useFirebase();
 
-  const [allJobs, setAllJobs] = useState([
-    {
-      id: 1,
-      vehicleNumber: 'ABC-1234',
-      customerName: 'John Doe',
-      phoneNumber: '0771234567',
-      vehicleType: 'Car',
-      lastService: 'Oil Change',
-      jobDateTime: '2025-07-20T10:30:00'
-    },
-    {
-      id: 2,
-      vehicleNumber: 'XYZ-5678',
-      customerName: 'Jane Smith',
-      phoneNumber: '0777654321',
-      vehicleType: 'Car',
-      lastService: 'Oil Change',
-      jobDateTime: '2025-07-18T09:15:00'
-    }
-  ]);
-
-  const handleSearch = (vehicleNumber) => {
+  const handleSearch = async (vehicleNumber) => {
     setSearchVehicleNumber(vehicleNumber);
-    const customer = customers.find(c => c.vehicleNumber.toLowerCase() === vehicleNumber.toLowerCase());
+    setAppLoading(true);
+    setAppError(null);
     
-    if (customer) {
-      setSelectedCustomer(customer);
-      setCurrentPage('customerProfile');
-    } else {
-      setCurrentPage('registration');
+    try {
+      const customer = await customers.searchCustomer(vehicleNumber);
+      
+      if (customer) {
+        setSelectedCustomer(customer);
+        setCurrentPage('customerProfile');
+      } else {
+        setCurrentPage('registration');
+      }
+    } catch (error) {
+      setAppError('Error searching for customer. Please try again.');
+      console.error('Search error:', error);
+    } finally {
+      setAppLoading(false);
     }
   };
 
-  const handleRegisterCustomer = (customerData) => {
-    const newCustomer = {
-      ...customerData,
-      id: customers.length + 1,
-      serviceHistory: []
-    };
+  const handleRegisterCustomer = async (customerData) => {
+    setAppLoading(true);
+    setAppError(null);
     
-    setCustomers([...customers, newCustomer]);
-    setSelectedCustomer(newCustomer);
-    setCurrentPage('customerProfile');
+    try {
+      const newCustomer = await customers.addCustomer({
+        ...customerData,
+        vehicleNumber: customerData.vehicleNumber.toUpperCase()
+      });
+      
+      setSelectedCustomer(newCustomer);
+      setCurrentPage('customerProfile');
+    } catch (error) {
+      setAppError('Error registering customer. Please try again.');
+      console.error('Registration error:', error);
+    } finally {
+      setAppLoading(false);
+    }
   };
 
-  const handleAddJob = (jobData) => {
-    // Update customer's service history
-    const updatedCustomers = customers.map(customer => {
-      if (customer.id === selectedCustomer.id) {
-        const newJob = {
-          id: customer.serviceHistory.length + 1,
-          jobDateTime: new Date().toISOString(),
-          services: jobData.services
-        };
-        return {
-          ...customer,
-          serviceHistory: [...customer.serviceHistory, newJob]
-        };
-      }
-      return customer;
-    });
+  const handleAddJob = async (jobData) => {
+    setAppLoading(true);
+    setAppError(null);
     
-    setCustomers(updatedCustomers);
-    
-    // Update all jobs list
-    const newJobEntry = {
-      id: allJobs.length + 1,
-      vehicleNumber: selectedCustomer.vehicleNumber,
-      customerName: selectedCustomer.fullName,
-      phoneNumber: selectedCustomer.mobileNumber,
-      vehicleType: selectedCustomer.vehicleType,
-      lastService: jobData.services[0] || 'Service',
-      jobDateTime: new Date().toISOString()
-    };
-    
-    setAllJobs([newJobEntry, ...allJobs]);
-    
-    // Update selected customer with new service history
-    const updatedCustomer = updatedCustomers.find(c => c.id === selectedCustomer.id);
-    setSelectedCustomer(updatedCustomer);
-    
-    setCurrentPage('customerProfile');
+    try {
+      await jobs.addJob({
+        ...jobData,
+        customerId: selectedCustomer.id,
+        vehicleNumber: selectedCustomer.vehicleNumber
+      });
+      
+      // Refresh customer data to get updated service history
+      const updatedCustomer = await customers.searchCustomer(selectedCustomer.vehicleNumber);
+      setSelectedCustomer(updatedCustomer);
+      
+      setCurrentPage('customerProfile');
+    } catch (error) {
+      setAppError('Error adding job. Please try again.');
+      console.error('Add job error:', error);
+    } finally {
+      setAppLoading(false);
+    }
   };
 
   const navigateTo = (page, customer = null) => {
@@ -147,10 +90,61 @@ function App() {
     }
   };
 
+  const handleDashboardCustomerSelect = async (vehicleNumber) => {
+    setAppLoading(true);
+    try {
+      const customer = await customers.searchCustomer(vehicleNumber);
+      if (customer) {
+        setSelectedCustomer(customer);
+        navigateTo('customerProfile');
+      }
+    } catch (error) {
+      setAppError('Error loading customer data.');
+      console.error('Dashboard customer select error:', error);
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  // Load dashboard data
+  const loadDashboardData = async () => {
+    try {
+      await jobs.loadAllJobs();
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
   const renderCurrentPage = () => {
+    if (appLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (appError) {
+      return (
+        <div className="error-page">
+          <div className="container">
+            <div className="error-card card">
+              <h2>⚠️ Error</h2>
+              <p>{appError}</p>
+              <button className="btn" onClick={() => {
+                setAppError(null);
+                setCurrentPage('search');
+              }}>
+                Return to Search
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentPage) {
       case 'search':
-        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => navigateTo('dashboard')} />;
+        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => {
+          loadDashboardData();
+          navigateTo('dashboard');
+        }} />;
       case 'registration':
         return (
           <RegistrationForm
@@ -178,19 +172,17 @@ function App() {
       case 'dashboard':
         return (
           <Dashboard
-            jobs={allJobs}
+            jobs={jobs.jobs}
+            loading={jobs.loading}
             onNavigateToSearch={() => navigateTo('search')}
-            onCustomerSelect={(vehicleNumber) => {
-              const customer = customers.find(c => c.vehicleNumber === vehicleNumber);
-              if (customer) {
-                setSelectedCustomer(customer);
-                navigateTo('customerProfile');
-              }
-            }}
+            onCustomerSelect={handleDashboardCustomerSelect}
           />
         );
       default:
-        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => navigateTo('dashboard')} />;
+        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => {
+          loadDashboardData();
+          navigateTo('dashboard');
+        }} />;
     }
   };
 

@@ -1,8 +1,9 @@
 import React from 'react';
 import CustomerCard from './CustomerCard';
+import LoadingSpinner from './LoadingSpinner';
 import './Dashboard.css';
 
-const Dashboard = ({ jobs, onNavigateToSearch, onCustomerSelect }) => {
+const Dashboard = ({ jobs, loading, onNavigateToSearch, onCustomerSelect }) => {
   const formatDateTime = (dateTime) => {
     const date = new Date(dateTime);
     return date.toLocaleDateString('en-US', {
@@ -12,7 +13,11 @@ const Dashboard = ({ jobs, onNavigateToSearch, onCustomerSelect }) => {
     });
   };
 
-  const sortedJobs = jobs.sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime));
+  if (loading) {
+    return <LoadingSpinner message="Loading dashboard data..." />;
+  }
+
+  const sortedJobs = jobs ? jobs.sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime)) : [];
 
   return (
     <div className="dashboard-page">
@@ -29,7 +34,7 @@ const Dashboard = ({ jobs, onNavigateToSearch, onCustomerSelect }) => {
         </div>
 
         <div className="dashboard-content">
-          {jobs.length === 0 ? (
+          {sortedJobs.length === 0 ? (
             <div className="no-jobs card">
               <div className="no-jobs-icon">📊</div>
               <h3>No Service Records Found</h3>
@@ -46,7 +51,7 @@ const Dashboard = ({ jobs, onNavigateToSearch, onCustomerSelect }) => {
                     key={job.id}
                     vehicleNumber={job.vehicleNumber}
                     customerName={job.customerName}
-                    serviceType={job.lastService}
+                    serviceType={job.services ? job.services[0] : job.lastService}
                     phoneNumber={job.phoneNumber}
                     vehicleType={job.vehicleType}
                     serviceDate={formatDateTime(job.jobDateTime)}
@@ -58,7 +63,7 @@ const Dashboard = ({ jobs, onNavigateToSearch, onCustomerSelect }) => {
               <div className="dashboard-footer">
                 <div className="total-count">
                   <span className="count-label">Total Jobs:</span>
-                  <span className="count-number">{jobs.length}</span>
+                  <span className="count-number">{sortedJobs.length}</span>
                 </div>
               </div>
             </>
