@@ -1,0 +1,164 @@
+.customer-card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px var(--shadow);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e1e1e1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.customer-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--accent-yellow);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.vehicle-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.vehicle-number {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-dark-green);
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.vehicle-type-badge {
+  background: var(--sign-dark-teal);
+  color: var(--white);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.service-date {
+  background: var(--background-beige);
+  color: var(--text-dark-green);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customer-name,
+.customer-phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dark-green);
+  font-size: 14px;
+}
+
+.customer-name {
+  font-weight: 600;
+}
+
+.customer-phone {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.name-icon,
+.phone-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.service-info {
+  background: var(--background-beige);
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-yellow);
+}
+
+.service-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sign-dark-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.service-type {
+  font-weight: 600;
+  color: var(--text-dark-green);
+  font-size: 14px;
+}
+
+.card-footer {
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.view-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--sign-dark-teal);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.arrow {
+  transition: transform 0.3s ease;
+  font-weight: bold;
+}
+
+.customer-card:hover .arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 480px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .vehicle-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .service-date {
+    align-self: flex-end;
+  }
+}
