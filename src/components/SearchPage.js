@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import './SearchPage.css';
-import { getAllJobs } from '../firebase/yellowHutApi';
-import { testFirebaseConnection } from '../utils/testFirebase';
+import { registerNewCustomer } from '../firebase/yellowHutApi';
 
 const SearchPage = ({ onSearch, onNavigateToDashboard }) => {
   const [vehicleNumber, setVehicleNumber] = useState('');
-  const [debugInfo, setDebugInfo] = useState('');
-  const [testing, setTesting] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [addingCustomer, setAddingCustomer] = useState(false);
+  const [customerFormData, setCustomerFormData] = useState({
+    vehicleNumber: '',
+    full_name: '',
+    mobile_number: '',
+    address: '',
+    vehicle_model: '',
+    nic_number: '',
+    birthday: '',
+    vehicle_type: 'Car'
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -15,40 +24,63 @@ const SearchPage = ({ onSearch, onNavigateToDashboard }) => {
     }
   };
 
-  const handleTestFirebase = async () => {
-    setTesting(true);
-    setDebugInfo('Testing Firebase connection...');
+  const handleAddNewCustomer = () => {
+    setShowAddCustomer(true);
+    setCustomerFormData({
+      vehicleNumber: '',
+      full_name: '',
+      mobile_number: '',
+      address: '',
+      vehicle_model: '',
+      nic_number: '',
+      birthday: '',
+      vehicle_type: 'Car'
+    });
+  };
+
+  const handleCustomerFormChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmitNewCustomer = async (e) => {
+    e.preventDefault();
+    setAddingCustomer(true);
     
     try {
-      console.log('🧪 Testing Firebase connection...');
-      
-      // First test basic Firebase connectivity
-      const connectionTest = await testFirebaseConnection();
-      console.log('🧪 Connection test result:', connectionTest);
-      
-      let debugOutput = `🔥 Firebase Connection Test:\n${connectionTest.message}\n\n`;
-      
-      if (connectionTest.success) {
-        // If connection works, test getAllJobs
-        try {
-          console.log('🧪 Testing getAllJobs...');
-          const jobs = await getAllJobs();
-          console.log('🧪 getAllJobs result:', jobs);
-          
-          debugOutput += `📊 getAllJobs Test:\n✅ Success!\nFound ${jobs.length} jobs in database.\n\nJobs data:\n${JSON.stringify(jobs, null, 2)}`;
-        } catch (jobError) {
-          console.error('🧪 getAllJobs failed:', jobError);
-          debugOutput += `📊 getAllJobs Test:\n❌ Failed!\nError: ${jobError.message}\n\nStack: ${jobError.stack}`;
-        }
+      // Validate required fields
+      if (!customerFormData.vehicleNumber || !customerFormData.full_name || !customerFormData.mobile_number) {
+        alert('Please fill in Vehicle Number, Full Name, and Mobile Number');
+        setAddingCustomer(false);
+        return;
       }
+
+      // Register the new customer
+      await registerNewCustomer(customerFormData.vehicleNumber.toUpperCase(), customerFormData);
       
-      setDebugInfo(debugOutput);
+      alert(`Customer ${customerFormData.full_name} added successfully!`);
+      setShowAddCustomer(false);
+      
+      // Clear form
+      setCustomerFormData({
+        vehicleNumber: '',
+        full_name: '',
+        mobile_number: '',
+        address: '',
+        vehicle_model: '',
+        nic_number: '',
+        birthday: '',
+        vehicle_type: 'Car'
+      });
       
     } catch (error) {
-      console.error('🧪 Test failed:', error);
-      setDebugInfo(`❌ Test failed!\n\nError: ${error.message}\n\nStack: ${error.stack}`);
+      console.error('Error adding customer:', error);
+      alert(`Error adding customer: ${error.message}`);
     } finally {
-      setTesting(false);
+      setAddingCustomer(false);
     }
   };
 
@@ -90,33 +122,178 @@ const SearchPage = ({ onSearch, onNavigateToDashboard }) => {
             <button 
               type="button" 
               className="btn" 
-              onClick={handleTestFirebase}
-              disabled={testing}
+              onClick={handleAddNewCustomer}
               style={{ 
                 marginTop: '10px', 
-                backgroundColor: '#FF9800',
-                opacity: testing ? 0.6 : 1 
+                backgroundColor: '#4CAF50'
               }}
             >
-              {testing ? '⏳ Testing...' : '🧪 Test Firebase Connection'}
+              ➕ Add New Customer
             </button>
           </form>
         </div>
         
-        {debugInfo && (
-          <div className="debug-info card" style={{ 
-            margin: '20px 0', 
-            padding: '15px', 
-            backgroundColor: '#f5f5f5',
-            borderLeft: '4px solid #2196F3',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            fontSize: '12px',
-            maxHeight: '300px',
-            overflow: 'auto'
+        {/* Add Customer Modal/Form */}
+        {showAddCustomer && (
+          <div className="modal-overlay" style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
           }}>
-            <h4 style={{ margin: '0 0 10px 0', fontFamily: 'inherit' }}>🔍 Debug Information:</h4>
-            {debugInfo}
+            <div className="add-customer-modal card" style={{
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '10px'
+            }}>
+              <h2 style={{ marginBottom: '20px', color: '#333' }}>Add New Customer</h2>
+              
+              <form onSubmit={handleSubmitNewCustomer}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Vehicle Number *</label>
+                    <input
+                      type="text"
+                      name="vehicleNumber"
+                      className="input-field"
+                      value={customerFormData.vehicleNumber}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., ABC-1234"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Vehicle Type</label>
+                    <select
+                      name="vehicle_type"
+                      className="input-field"
+                      value={customerFormData.vehicle_type}
+                      onChange={handleCustomerFormChange}
+                    >
+                      <option value="Car">Car</option>
+                      <option value="Van">Van</option>
+                      <option value="SUV">SUV</option>
+                      <option value="Pickup">Pickup</option>
+                      <option value="Motorcycle">Motorcycle</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Full Name *</label>
+                    <input
+                      type="text"
+                      name="full_name"
+                      className="input-field"
+                      value={customerFormData.full_name}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., John Silva"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Mobile Number *</label>
+                    <input
+                      type="text"
+                      name="mobile_number"
+                      className="input-field"
+                      value={customerFormData.mobile_number}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., 077-123-4567"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      className="input-field"
+                      value={customerFormData.address}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., No. 123, Galle Road, Colombo 03"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Vehicle Model</label>
+                    <input
+                      type="text"
+                      name="vehicle_model"
+                      className="input-field"
+                      value={customerFormData.vehicle_model}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., Toyota Prius"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">NIC Number</label>
+                    <input
+                      type="text"
+                      name="nic_number"
+                      className="input-field"
+                      value={customerFormData.nic_number}
+                      onChange={handleCustomerFormChange}
+                      placeholder="e.g., 199012345678"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Birthday</label>
+                    <input
+                      type="date"
+                      name="birthday"
+                      className="input-field"
+                      value={customerFormData.birthday}
+                      onChange={handleCustomerFormChange}
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '15px', 
+                  justifyContent: 'flex-end', 
+                  marginTop: '25px',
+                  borderTop: '1px solid #eee',
+                  paddingTop: '20px'
+                }}>
+                  <button 
+                    type="button" 
+                    className="btn" 
+                    onClick={() => setShowAddCustomer(false)}
+                    style={{ backgroundColor: '#6c757d' }}
+                    disabled={addingCustomer}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn" 
+                    disabled={addingCustomer}
+                    style={{ 
+                      backgroundColor: '#4CAF50',
+                      opacity: addingCustomer ? 0.6 : 1 
+                    }}
+                  >
+                    {addingCustomer ? '⏳ Adding...' : '✅ Add Customer'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
