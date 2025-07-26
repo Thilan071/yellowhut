@@ -4,7 +4,7 @@ import './Dashboard.css';
 
 // Direct Firebase imports
 import { db } from '../firebase/config';
-import { collection, getDocs, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 const SimpleDashboard = ({ onNavigateToSearch, onCustomerSelect }) => {
   const [jobs, setJobs] = useState([]);
@@ -100,63 +100,6 @@ const SimpleDashboard = ({ onNavigateToSearch, onCustomerSelect }) => {
     }
   };
 
-  // Add sample data directly
-  const addSampleData = async () => {
-    try {
-      console.log('🔄 SimpleDashboard: Adding sample data...');
-      
-      // Sample data
-      const sampleCustomer = {
-        full_name: 'John Silva',
-        mobile_number: '077-123-4567',
-        address: 'No. 123, Galle Road, Colombo 03',
-        vehicle_model: 'Toyota Prius',
-        nic_number: '199012345678',
-        birthday: '1990-01-15',
-        vehicle_type: 'Car',
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp()
-      };
-
-      const sampleJob = {
-        services: ['Oil Change', 'Filter Replacement'],
-        job_datetime: serverTimestamp(),
-        created_at: serverTimestamp(),
-        technician_name: 'Sunil Perera',
-        cost: 3500,
-        status: 'Completed',
-        notes: 'Regular maintenance service'
-      };
-
-      // Add customer
-      const customerRef = doc(db, 'customers', 'ABC-1234');
-      await setDoc(customerRef, sampleCustomer);
-
-      // Add job to main collection
-      const jobsRef = collection(db, 'jobs');
-      await addDoc(jobsRef, {
-        ...sampleJob,
-        vehicleNumber: 'ABC-1234',
-        customerName: sampleCustomer.full_name,
-        phoneNumber: sampleCustomer.mobile_number,
-        vehicleType: sampleCustomer.vehicle_type
-      });
-
-      // Add job to customer subcollection
-      const customerJobsRef = collection(db, 'customers', 'ABC-1234', 'jobs');
-      await addDoc(customerJobsRef, sampleJob);
-
-      console.log('✅ SimpleDashboard: Sample data added');
-      
-      // Refresh data
-      await fetchJobsFromFirebase();
-      
-    } catch (error) {
-      console.error('❌ SimpleDashboard: Error adding sample data:', error);
-      setError(`Error adding sample data: ${error.message}`);
-    }
-  };
-
   // Fetch data when component mounts
   useEffect(() => {
     fetchJobsFromFirebase();
@@ -234,16 +177,6 @@ const SimpleDashboard = ({ onNavigateToSearch, onCustomerSelect }) => {
                 </button>
                 <button 
                   className="btn" 
-                  onClick={addSampleData}
-                  style={{ 
-                    marginLeft: '10px', 
-                    backgroundColor: '#4CAF50' 
-                  }}
-                >
-                  🧪 Add Sample Data
-                </button>
-                <button 
-                  className="btn" 
                   onClick={fetchJobsFromFirebase}
                   style={{ 
                     marginLeft: '10px', 
@@ -263,16 +196,6 @@ const SimpleDashboard = ({ onNavigateToSearch, onCustomerSelect }) => {
                   style={{ backgroundColor: '#2196F3' }}
                 >
                   🔄 Refresh Data
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={addSampleData}
-                  style={{ 
-                    marginLeft: '10px', 
-                    backgroundColor: '#4CAF50' 
-                  }}
-                >
-                  🧪 Add More Sample Data
                 </button>
               </div>
               

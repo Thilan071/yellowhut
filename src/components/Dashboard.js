@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import CustomerCard from './CustomerCard';
 import './Dashboard.css';
-import { addTestData } from '../utils/addTestData';
-import { testFirebaseConnection } from '../utils/testFirebase';
-import { directGetAllJobs, directAddSampleData } from '../utils/directFirebase';
 
 const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
   const [jobs, setJobs] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [addingTestData, setAddingTestData] = useState(false);
   const [forceShowNoData, setForceShowNoData] = useState(false);
-  const [testingFirebase, setTestingFirebase] = useState(false);
-  const [firebaseTestResult, setFirebaseTestResult] = useState('');
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -75,7 +69,6 @@ const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
       console.log('🔄 Dashboard: Using direct Firebase load...');
       const jobsData = await directGetAllJobs();
       setJobs(jobsData || []);
-      setFirebaseTestResult(`Direct load successful! Found ${jobsData.length} jobs.`);
     } catch (error) {
       console.error('❌ Dashboard: Direct load failed:', error);
       setError(`Direct load failed: ${error.message}`);
@@ -83,72 +76,6 @@ const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
       setForceShowNoData(true);
     } finally {
       setDashboardLoading(false);
-    }
-  };
-
-  const handleDirectAddData = async () => {
-    setAddingTestData(true);
-    try {
-      const success = await directAddSampleData();
-      if (success) {
-        setFirebaseTestResult('Sample data added successfully!');
-        // Reload using direct method
-        await handleDirectLoad();
-      } else {
-        setFirebaseTestResult('Failed to add sample data.');
-      }
-    } catch (error) {
-      setFirebaseTestResult(`Error adding data: ${error.message}`);
-    } finally {
-      setAddingTestData(false);
-    }
-  };
-
-  const handleTestFirebase = async () => {
-    setTestingFirebase(true);
-    try {
-      const result = await testFirebaseConnection();
-      setFirebaseTestResult(result.message);
-      if (result.success && result.data.customers.count > 0) {
-        // If there are customers, try to reload jobs
-        setDashboardLoading(true);
-        setForceShowNoData(false);
-        const jobsData = await loadJobs();
-        const jobsArray = Array.isArray(jobsData) ? jobsData : [];
-        setJobs(jobsArray);
-        setDashboardLoading(false);
-      }
-    } catch (error) {
-      setFirebaseTestResult(`Test failed: ${error.message}`);
-    } finally {
-      setTestingFirebase(false);
-    }
-  };
-
-  const handleAddTestData = async () => {
-    setAddingTestData(true);
-    try {
-      const success = await addTestData();
-      if (success) {
-        // Reload jobs after adding test data
-        const fetchJobs = async () => {
-          try {
-            const jobsData = await loadJobs();
-            const jobsArray = Array.isArray(jobsData) ? jobsData : [];
-            setJobs(jobsArray);
-            setError(null);
-          } catch (error) {
-            console.error('Error reloading jobs:', error);
-            setError(`Failed to reload jobs: ${error.message}`);
-          }
-        };
-        await fetchJobs();
-      }
-    } catch (error) {
-      console.error('Error adding test data:', error);
-      setError(`Failed to add test data: ${error.message}`);
-    } finally {
-      setAddingTestData(false);
     }
   };
 
@@ -241,22 +168,6 @@ const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
               <h3>No Service Records Found</h3>
               <p>Start by adding your first customer service record to see the dashboard in action.</p>
               
-              {firebaseTestResult && (
-                <div style={{ 
-                  margin: '15px 0', 
-                  padding: '10px', 
-                  backgroundColor: '#f0f8ff', 
-                  border: '1px solid #cce7ff',
-                  borderRadius: '5px',
-                  fontSize: '12px',
-                  fontFamily: 'monospace',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  <strong>Firebase Test Result:</strong>
-                  {firebaseTestResult}
-                </div>
-              )}
-              
               <div className="no-jobs-actions">
                 <button className="btn" onClick={onNavigateToSearch}>
                   ➕ Add First Customer
@@ -270,30 +181,6 @@ const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
                   }}
                 >
                   🚀 Direct Load
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={handleTestFirebase}
-                  disabled={testingFirebase}
-                  style={{ 
-                    marginLeft: '10px', 
-                    backgroundColor: '#FF9800',
-                    opacity: testingFirebase ? 0.6 : 1 
-                  }}
-                >
-                  {testingFirebase ? '⏳ Testing...' : '🔍 Test Firebase'}
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={handleDirectAddData}
-                  disabled={addingTestData}
-                  style={{ 
-                    marginLeft: '10px', 
-                    backgroundColor: '#4CAF50',
-                    opacity: addingTestData ? 0.6 : 1 
-                  }}
-                >
-                  {addingTestData ? '⏳ Adding...' : '🧪 Add Test Data'}
                 </button>
               </div>
             </div>
