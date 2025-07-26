@@ -49,9 +49,7 @@ const AddJobForm = ({ customer, onSaveJob, onBack }) => {
   const handleSaveJob = () => {
     if (servicesToAdd.length > 0) {
       onSaveJob({
-        services: servicesToAdd,
-        vehicleNumber: customer.vehicleNumber,
-        customerId: customer.id
+        services: servicesToAdd
       });
     }
   };

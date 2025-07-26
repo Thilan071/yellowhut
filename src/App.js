@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import './App.css';
 import SearchPage from './components/SearchPage';
 import RegistrationForm from './components/RegistrationForm';
@@ -6,7 +6,7 @@ import CustomerProfilePage from './components/CustomerProfilePage';
 import AddJobForm from './components/AddJobForm';
 import Dashboard from './components/Dashboard';
 import LoadingSpinner from './components/LoadingSpinner';
-import { useFirebase } from './hooks/useFirebase';
+import { useYellowHut } from './hooks/useYellowHut';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('search');
@@ -15,7 +15,7 @@ function App() {
   const [appLoading, setAppLoading] = useState(false);
   const [appError, setAppError] = useState(null);
   
-  const { customers, jobs } = useFirebase();
+  const { customers, jobs } = useYellowHut();
 
   const handleSearch = async (vehicleNumber) => {
     setSearchVehicleNumber(vehicleNumber);
@@ -44,10 +44,8 @@ function App() {
     setAppError(null);
     
     try {
-      const newCustomer = await customers.addCustomer({
-        ...customerData,
-        vehicleNumber: customerData.vehicleNumber.toUpperCase()
-      });
+      const vehicleNumber = customerData.vehicleNumber.toUpperCase();
+      const newCustomer = await customers.addCustomer(vehicleNumber, customerData);
       
       setSelectedCustomer(newCustomer);
       setCurrentPage('customerProfile');
@@ -64,11 +62,8 @@ function App() {
     setAppError(null);
     
     try {
-      await jobs.addJob({
-        ...jobData,
-        customerId: selectedCustomer.id,
-        vehicleNumber: selectedCustomer.vehicleNumber
-      });
+      const vehicleNumber = selectedCustomer.vehicleNumber;
+      await jobs.addJob(vehicleNumber, jobData);
       
       // Refresh customer data to get updated service history
       const updatedCustomer = await customers.searchCustomer(selectedCustomer.vehicleNumber);
@@ -107,13 +102,18 @@ function App() {
   };
 
   // Load dashboard data
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
+    console.log('🔄 App: loadDashboardData called');
     try {
-      await jobs.loadAllJobs();
+      console.log('🔄 App: Calling jobs.loadAllJobs()...');
+      const result = await jobs.loadAllJobs();
+      console.log('✅ App: jobs.loadAllJobs() result:', result);
+      return result;
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ App: Error loading dashboard data:', error);
+      return [];
     }
-  };
+  }, [jobs]);
 
   const renderCurrentPage = () => {
     if (appLoading) {
@@ -172,10 +172,10 @@ function App() {
       case 'dashboard':
         return (
           <Dashboard
-            jobs={jobs.jobs}
-            loading={jobs.loading}
+            jobs={[]} // Will be loaded dynamically in the component
             onNavigateToSearch={() => navigateTo('search')}
             onCustomerSelect={handleDashboardCustomerSelect}
+            loadJobs={loadDashboardData}
           />
         );
       default:

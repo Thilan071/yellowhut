@@ -69,6 +69,53 @@
   margin-bottom: 24px;
 }
 
+.no-jobs-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.no-jobs .btn {
+  color: var(--text-dark-green);
+  background: var(--accent-yellow);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+.no-jobs .btn:hover {
+  background: var(--hover-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 162, 97, 0.3);
+}
+
+.test-data-btn {
+  background: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.test-data-btn:hover {
+  background: var(--hover-color) !important;
+  color: var(--text-dark-green) !important;
+}
+
+.database-setup-btn {
+  background: #4CAF50 !important;
+  color: white !important;
+}
+
+.database-setup-btn:hover {
+  background: #45a049 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
 .jobs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

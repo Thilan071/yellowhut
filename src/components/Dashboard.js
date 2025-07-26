@@ -1,9 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomerCard from './CustomerCard';
-import LoadingSpinner from './LoadingSpinner';
 import './Dashboard.css';
 
-const Dashboard = ({ jobs, loading, onNavigateToSearch, onCustomerSelect }) => {
+const Dashboard = ({ onNavigateToSearch, onCustomerSelect, loadJobs }) => {
+  const [jobs, setJobs] = useState([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      console.log('🔄 Dashboard: Starting to fetch jobs...');
+      setDashboardLoading(true);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ Dashboard: Loading timeout reached');
+        setDashboardLoading(false);
+        setJobs([]);
+      }, 10000); // 10 second timeout
+      
+      try {
+        const jobsData = await loadJobs();
+        console.log('✅ Dashboard: Jobs loaded:', jobsData);
+        setJobs(jobsData || []);
+      } catch (error) {
+        console.error('❌ Dashboard: Error loading jobs:', error);
+        setJobs([]);
+      } finally {
+        clearTimeout(timeoutId);
+        console.log('🏁 Dashboard: Loading complete');
+        setDashboardLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, [loadJobs]);
+
   const formatDateTime = (dateTime) => {
     const date = new Date(dateTime);
     return date.toLocaleDateString('en-US', {
@@ -13,8 +44,18 @@ const Dashboard = ({ jobs, loading, onNavigateToSearch, onCustomerSelect }) => {
     });
   };
 
-  if (loading) {
-    return <LoadingSpinner message="Loading dashboard data..." />;
+  if (dashboardLoading) {
+    return (
+      <div className="dashboard loading">
+        <header className="dashboard-header">
+          <h1>YellowHut Dashboard</h1>
+        </header>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading jobs...</p>
+        </div>
+      </div>
+    );
   }
 
   const sortedJobs = jobs ? jobs.sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime)) : [];
@@ -38,10 +79,12 @@ const Dashboard = ({ jobs, loading, onNavigateToSearch, onCustomerSelect }) => {
             <div className="no-jobs card">
               <div className="no-jobs-icon">📊</div>
               <h3>No Service Records Found</h3>
-              <p>Start by adding your first customer service record.</p>
-              <button className="btn" onClick={onNavigateToSearch}>
-                ➕ Add First Customer
-              </button>
+              <p>Start by adding your first customer service record to see the dashboard in action.</p>
+              <div className="no-jobs-actions">
+                <button className="btn" onClick={onNavigateToSearch}>
+                  ➕ Add First Customer
+                </button>
+              </div>
             </div>
           ) : (
             <>
