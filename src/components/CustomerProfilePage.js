@@ -6,6 +6,11 @@ const CustomerProfilePage = ({ customer, onAddJob, onBack }) => {
     return <div>Loading...</div>;
   }
 
+  // Debug logging
+  console.log('🔍 CustomerProfilePage - Customer data:', customer);
+  console.log('📋 CustomerProfilePage - Service history:', customer.serviceHistory);
+  console.log('📊 CustomerProfilePage - Service history length:', customer.serviceHistory?.length || 0);
+
   const formatDateTime = (dateTime) => {
     const date = new Date(dateTime);
     return date.toLocaleString('en-US', {
@@ -84,11 +89,11 @@ const CustomerProfilePage = ({ customer, onAddJob, onBack }) => {
             <div className="history-header">
               <h3>Service History</h3>
               <span className="history-count">
-                {customer.serviceHistory.length} job{customer.serviceHistory.length !== 1 ? 's' : ''}
+                {(customer.serviceHistory || []).length} job{(customer.serviceHistory || []).length !== 1 ? 's' : ''}
               </span>
             </div>
 
-            {customer.serviceHistory.length === 0 ? (
+            {(!customer.serviceHistory || customer.serviceHistory.length === 0) ? (
               <div className="no-history">
                 <div className="no-history-icon">📋</div>
                 <p>No service history found</p>
@@ -96,7 +101,7 @@ const CustomerProfilePage = ({ customer, onAddJob, onBack }) => {
               </div>
             ) : (
               <div className="history-list">
-                {customer.serviceHistory
+                {(customer.serviceHistory || [])
                   .sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime))
                   .map((job) => (
                     <div key={job.id} className="history-item">
@@ -108,7 +113,7 @@ const CustomerProfilePage = ({ customer, onAddJob, onBack }) => {
                       <div className="job-services">
                         <div className="services-header">Services Performed:</div>
                         <div className="services-list">
-                          {job.services.map((service, index) => (
+                          {(job.services || []).map((service, index) => (
                             <span key={index} className="service-tag">
                               {service}
                             </span>

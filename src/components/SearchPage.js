@@ -1,13 +1,54 @@
 import React, { useState } from 'react';
 import './SearchPage.css';
+import { getAllJobs } from '../firebase/yellowHutApi';
+import { testFirebaseConnection } from '../utils/testFirebase';
 
 const SearchPage = ({ onSearch, onNavigateToDashboard }) => {
   const [vehicleNumber, setVehicleNumber] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
+  const [testing, setTesting] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (vehicleNumber.trim()) {
       onSearch(vehicleNumber.trim());
+    }
+  };
+
+  const handleTestFirebase = async () => {
+    setTesting(true);
+    setDebugInfo('Testing Firebase connection...');
+    
+    try {
+      console.log('🧪 Testing Firebase connection...');
+      
+      // First test basic Firebase connectivity
+      const connectionTest = await testFirebaseConnection();
+      console.log('🧪 Connection test result:', connectionTest);
+      
+      let debugOutput = `🔥 Firebase Connection Test:\n${connectionTest.message}\n\n`;
+      
+      if (connectionTest.success) {
+        // If connection works, test getAllJobs
+        try {
+          console.log('🧪 Testing getAllJobs...');
+          const jobs = await getAllJobs();
+          console.log('🧪 getAllJobs result:', jobs);
+          
+          debugOutput += `📊 getAllJobs Test:\n✅ Success!\nFound ${jobs.length} jobs in database.\n\nJobs data:\n${JSON.stringify(jobs, null, 2)}`;
+        } catch (jobError) {
+          console.error('🧪 getAllJobs failed:', jobError);
+          debugOutput += `📊 getAllJobs Test:\n❌ Failed!\nError: ${jobError.message}\n\nStack: ${jobError.stack}`;
+        }
+      }
+      
+      setDebugInfo(debugOutput);
+      
+    } catch (error) {
+      console.error('🧪 Test failed:', error);
+      setDebugInfo(`❌ Test failed!\n\nError: ${error.message}\n\nStack: ${error.stack}`);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -45,8 +86,39 @@ const SearchPage = ({ onSearch, onNavigateToDashboard }) => {
             <button type="submit" className="btn search-btn">
               🔍 Search Vehicle
             </button>
+            
+            <button 
+              type="button" 
+              className="btn" 
+              onClick={handleTestFirebase}
+              disabled={testing}
+              style={{ 
+                marginTop: '10px', 
+                backgroundColor: '#FF9800',
+                opacity: testing ? 0.6 : 1 
+              }}
+            >
+              {testing ? '⏳ Testing...' : '🧪 Test Firebase Connection'}
+            </button>
           </form>
         </div>
+        
+        {debugInfo && (
+          <div className="debug-info card" style={{ 
+            margin: '20px 0', 
+            padding: '15px', 
+            backgroundColor: '#f5f5f5',
+            borderLeft: '4px solid #2196F3',
+            fontFamily: 'monospace',
+            whiteSpace: 'pre-wrap',
+            fontSize: '12px',
+            maxHeight: '300px',
+            overflow: 'auto'
+          }}>
+            <h4 style={{ margin: '0 0 10px 0', fontFamily: 'inherit' }}>🔍 Debug Information:</h4>
+            {debugInfo}
+          </div>
+        )}
 
         <div className="search-info">
           <div className="info-card card">

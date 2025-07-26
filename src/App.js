@@ -4,7 +4,7 @@ import SearchPage from './components/SearchPage';
 import RegistrationForm from './components/RegistrationForm';
 import CustomerProfilePage from './components/CustomerProfilePage';
 import AddJobForm from './components/AddJobForm';
-import Dashboard from './components/Dashboard';
+import SimpleDashboard from './components/SimpleDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 import { useYellowHut } from './hooks/useYellowHut';
 
@@ -141,10 +141,7 @@ function App() {
 
     switch (currentPage) {
       case 'search':
-        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => {
-          loadDashboardData();
-          navigateTo('dashboard');
-        }} />;
+        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => navigateTo('dashboard')} />;
       case 'registration':
         return (
           <RegistrationForm
@@ -171,18 +168,13 @@ function App() {
         );
       case 'dashboard':
         return (
-          <Dashboard
-            jobs={[]} // Will be loaded dynamically in the component
+          <SimpleDashboard
             onNavigateToSearch={() => navigateTo('search')}
             onCustomerSelect={handleDashboardCustomerSelect}
-            loadJobs={loadDashboardData}
           />
         );
       default:
-        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => {
-          loadDashboardData();
-          navigateTo('dashboard');
-        }} />;
+        return <SearchPage onSearch={handleSearch} onNavigateToDashboard={() => navigateTo('dashboard')} />;
     }
   };
 

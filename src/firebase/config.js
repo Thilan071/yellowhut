@@ -1,8 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -16,12 +16,36 @@ const firebaseConfig = {
   measurementId: "G-2E7HVPMWZX"
 };
 
+console.log('🔥 Initializing Firebase with config:', firebaseConfig);
+
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+let db;
+let auth;
+let analytics;
 
-// Initialize Firebase services
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const analytics = getAnalytics(app);
+try {
+  app = initializeApp(firebaseConfig);
+  console.log('✅ Firebase app initialized successfully');
+  
+  // Initialize Firebase services
+  db = getFirestore(app);
+  console.log('✅ Firestore initialized successfully');
+  
+  auth = getAuth(app);
+  console.log('✅ Auth initialized successfully');
+  
+  // Initialize Analytics only in production
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    analytics = getAnalytics(app);
+    console.log('✅ Analytics initialized successfully');
+  }
+  
+} catch (error) {
+  console.error('❌ Firebase initialization failed:', error);
+  throw error;
+}
 
+// Export Firebase services
+export { db, auth, analytics };
 export default app;

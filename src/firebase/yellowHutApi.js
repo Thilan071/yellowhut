@@ -41,20 +41,60 @@ export const searchCustomer = async (vehicleNumber) => {
     
     const customerData = customerSnap.data();
     
-    // Get service history from jobs subcollection
-    const jobsRef = collection(db, CUSTOMERS_COLLECTION, vehicleId, JOBS_SUBCOLLECTION);
-    const jobsQuery = query(jobsRef, orderBy("job_datetime", "desc"));
-    const jobsSnap = await getDocs(jobsQuery);
+    let serviceHistory = [];
     
-    const serviceHistory = [];
-    jobsSnap.forEach((jobDoc) => {
-      const jobData = jobDoc.data();
-      serviceHistory.push({
-        id: jobDoc.id,
-        jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : new Date().toISOString(),
-        services: jobData.services || []
+    // First, try to get service history from jobs subcollection
+    try {
+      const jobsRef = collection(db, CUSTOMERS_COLLECTION, vehicleId, JOBS_SUBCOLLECTION);
+      const jobsQuery = query(jobsRef, orderBy("job_datetime", "desc"));
+      const jobsSnap = await getDocs(jobsQuery);
+      
+      jobsSnap.forEach((jobDoc) => {
+        const jobData = jobDoc.data();
+        serviceHistory.push({
+          id: jobDoc.id,
+          jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : new Date().toISOString(),
+          services: jobData.services || []
+        });
       });
-    });
+      
+      console.log(`📋 Found ${serviceHistory.length} jobs in customer subcollection for ${vehicleId}`);
+    } catch (subError) {
+      console.log(`⚠️ Error fetching from subcollection for ${vehicleId}:`, subError.message);
+    }
+    
+    // If no jobs found in subcollection, try main jobs collection
+    if (serviceHistory.length === 0) {
+      try {
+        console.log(`🔍 Searching main jobs collection for vehicle ${vehicleId}...`);
+        const mainJobsRef = collection(db, 'jobs');
+        const mainJobsQuery = query(
+          mainJobsRef, 
+          orderBy("job_datetime", "desc")
+        );
+        const mainJobsSnap = await getDocs(mainJobsQuery);
+        
+        mainJobsSnap.forEach((jobDoc) => {
+          const jobData = jobDoc.data();
+          // Check if this job belongs to the current vehicle
+          if (jobData.vehicleNumber === vehicleId) {
+            serviceHistory.push({
+              id: jobDoc.id,
+              jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : 
+                          (jobData.jobDateTime || new Date().toISOString()),
+              services: jobData.services || []
+            });
+          }
+        });
+        
+        console.log(`📋 Found ${serviceHistory.length} jobs in main collection for ${vehicleId}`);
+      } catch (mainError) {
+        console.log(`⚠️ Error fetching from main jobs collection:`, mainError.message);
+      }
+    }
+    
+    // Sort by date (most recent first)
+    serviceHistory.sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime));
     
     // Transform to component format
     return {
@@ -221,36 +261,115 @@ export const getAllCustomers = async () => {
  * Get all jobs across all customers for dashboard
  * @returns {Array} Array of all jobs with customer information
  */
+/**
+ * Get all jobs across all customers for dashboard
+ * This function searches through all customer documents and their job subcollections
+ * @returns {Array} Array of all jobs with customer information
+ */
 export const getAllJobs = async () => {
   try {
-    console.log('🔄 API: Fetching all jobs from main jobs collection...');
+    console.log('🔄 API: Starting getAllJobs...');
+    console.log('🔄 API: Database object:', db);
     
-    // Fetch directly from the main jobs collection
-    const jobsRef = collection(db, 'jobs');
-    const jobsQuery = query(jobsRef, orderBy("job_datetime", "desc"));
-    const jobsSnap = await getDocs(jobsQuery);
+    if (!db) {
+      throw new Error('Firebase database not initialized');
+    }
+    
+    // First, try to get from main jobs collection (if it exists)
+    console.log('🔄 API: Attempting to fetch from main jobs collection...');
+    try {
+      const jobsRef = collection(db, 'jobs');
+      const jobsQuery = query(jobsRef, orderBy("job_datetime", "desc"));
+      const jobsSnap = await getDocs(jobsQuery);
+      
+      if (!jobsSnap.empty) {
+        console.log(`✅ API: Found ${jobsSnap.size} jobs in main collection`);
+        const allJobs = [];
+        jobsSnap.forEach((jobDoc) => {
+          const jobData = jobDoc.data();
+          allJobs.push({
+            id: jobDoc.id,
+            vehicleNumber: jobData.vehicleNumber,
+            customerName: jobData.customerName,
+            phoneNumber: jobData.phoneNumber,
+            vehicleType: jobData.vehicleType,
+            services: jobData.services || [],
+            lastService: jobData.lastService || (jobData.services && jobData.services.length > 0 ? jobData.services[0] : 'Service'),
+            jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : new Date().toISOString()
+          });
+        });
+        return allJobs;
+      }
+    } catch (mainCollectionError) {
+      console.log('⚠️ API: Main jobs collection not found or empty, trying subcollections...');
+    }
+    
+    // If main collection doesn't exist or is empty, get jobs from customer subcollections
+    console.log('🔄 API: Fetching jobs from customer subcollections...');
+    const customersRef = collection(db, CUSTOMERS_COLLECTION);
+    const customersSnap = await getDocs(customersRef);
+    
+    console.log(`🔄 API: Found ${customersSnap.size} customers`);
     
     const allJobs = [];
-    jobsSnap.forEach((jobDoc) => {
-      const jobData = jobDoc.data();
-      allJobs.push({
-        id: jobDoc.id,
-        vehicleNumber: jobData.vehicleNumber,
-        customerName: jobData.customerName,
-        phoneNumber: jobData.phoneNumber,
-        vehicleType: jobData.vehicleType,
-        services: jobData.services || [],
-        lastService: jobData.lastService || (jobData.services && jobData.services.length > 0 ? jobData.services[0] : 'Service'),
-        jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : new Date().toISOString()
-      });
-    });
     
-    console.log(`✅ API: Found ${allJobs.length} jobs in main collection`);
+    // Iterate through each customer
+    for (const customerDoc of customersSnap.docs) {
+      const customerData = customerDoc.data();
+      const vehicleNumber = customerDoc.id;
+      
+      console.log(`🔄 API: Processing customer ${vehicleNumber}...`);
+      
+      // Get jobs subcollection for this customer
+      const jobsRef = collection(db, CUSTOMERS_COLLECTION, vehicleNumber, JOBS_SUBCOLLECTION);
+      
+      try {
+        const jobsQuery = query(jobsRef, orderBy("job_datetime", "desc"));
+        const jobsSnap = await getDocs(jobsQuery);
+        
+        console.log(`🔄 API: Customer ${vehicleNumber} has ${jobsSnap.size} jobs`);
+        
+        jobsSnap.forEach((jobDoc) => {
+          const jobData = jobDoc.data();
+          allJobs.push({
+            id: jobDoc.id,
+            vehicleNumber: vehicleNumber,
+            customerName: customerData.full_name,
+            phoneNumber: customerData.mobile_number,
+            vehicleType: customerData.vehicle_type || 'Car',
+            services: jobData.services || [],
+            lastService: jobData.services && jobData.services.length > 0 ? jobData.services[0] : 'Service',
+            jobDateTime: jobData.job_datetime?.toDate ? jobData.job_datetime.toDate().toISOString() : new Date().toISOString()
+          });
+        });
+      } catch (jobError) {
+        console.log(`⚠️ API: Error fetching jobs for customer ${vehicleNumber}:`, jobError.message);
+      }
+    }
+    
+    // Sort all jobs by date
+    allJobs.sort((a, b) => new Date(b.jobDateTime) - new Date(a.jobDateTime));
+    
+    console.log(`✅ API: Found total ${allJobs.length} jobs across all customers`);
+    console.log('✅ API: Final jobs array:', allJobs);
     return allJobs;
     
   } catch (error) {
     console.error("❌ API: Error getting all jobs:", error);
-    throw new Error(`Failed to get all jobs: ${error.message}`);
+    console.error("❌ API: Error details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    // Check if it's a Firebase error
+    if (error.code && error.code.startsWith('firestore/')) {
+      console.error("❌ API: This is a Firestore error:", error.code);
+    }
+    
+    // Return empty array instead of throwing to prevent app crash
+    console.log("⚠️ API: Returning empty array due to error");
+    return [];
   }
 };
 
