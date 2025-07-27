@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import './App.css';
+import LoginPage from './components/LoginPage';
 import SearchPage from './components/SearchPage';
 import RegistrationForm from './components/RegistrationForm';
 import CustomerProfilePage from './components/CustomerProfilePage';
@@ -9,6 +10,11 @@ import LoadingSpinner from './components/LoadingSpinner';
 import { useYellowHut } from './hooks/useYellowHut';
 
 function App() {
+  // Initialize authentication state from localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const savedAuth = localStorage.getItem('yellowhut_authenticated');
+    return savedAuth === 'true';
+  });
   const [currentPage, setCurrentPage] = useState('search');
   const [searchVehicleNumber, setSearchVehicleNumber] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -16,6 +22,21 @@ function App() {
   const [appError, setAppError] = useState(null);
   
   const { customers, jobs } = useYellowHut();
+
+  const handleLogin = (success) => {
+    if (success) {
+      setIsAuthenticated(true);
+      localStorage.setItem('yellowhut_authenticated', 'true');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('yellowhut_authenticated');
+    setCurrentPage('search');
+    setSelectedCustomer(null);
+    setSearchVehicleNumber('');
+  };
 
   const handleSearch = async (vehicleNumber) => {
     setSearchVehicleNumber(vehicleNumber);
@@ -180,7 +201,21 @@ function App() {
 
   return (
     <div className="App">
-      {renderCurrentPage()}
+      {!isAuthenticated ? (
+        <LoginPage onLogin={handleLogin} />
+      ) : (
+        <>
+          {renderCurrentPage()}
+          {/* Logout button */}
+          <button 
+            className="logout-btn"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            🚪 Logout
+          </button>
+        </>
+      )}
     </div>
   );
 }
